@@ -47,11 +47,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     ]);
 
-                    // Create database
-                    $test_pdo->exec('CREATE DATABASE IF NOT EXISTS `' . $db_name . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
-
-                    // Select database
-                    $test_pdo->exec('USE `' . $db_name . '`');
+                    // Create database (driver-specific syntax)
+                    if ($db_driver === 'pgsql') {
+                        // PostgreSQL: simple CREATE DATABASE
+                        try {
+                            $test_pdo->exec('CREATE DATABASE "' . $db_name . '"');
+                        } catch (PDOException $e) {
+                            // Database may already exist, ignore
+                        }
+                        // Connect to the newly created database
+                        $port = !empty($db_port) ? $db_port : 5432;
+                        $new_dsn = 'pgsql:host=' . $db_host . ';port=' . $port . ';dbname=' . $db_name;
+                        $test_pdo = new PDO($new_dsn, $db_user, $db_pass, [
+                            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        ]);
+                    } else {
+                        // MySQL: CREATE DATABASE with charset
+                        $test_pdo->exec('CREATE DATABASE IF NOT EXISTS `' . $db_name . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
+                        // Select database
+                        $test_pdo->exec('USE `' . $db_name . '`');
+                    }
 
                     // Execute schema
                     $statements = explode(';', DATABASE_SCHEMA);
