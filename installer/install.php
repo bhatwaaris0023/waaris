@@ -508,6 +508,7 @@ $db_user = $_SESSION['db_config']['user'] ?? 'root';
             <?php endif; ?>
 
             <form method="POST">
+                <input type="hidden" name="step" value="2">
                 <div class="form-group">
                     <label>Admin Username</label>
                     <input type="text" name="admin_username" required>
@@ -542,6 +543,7 @@ $db_user = $_SESSION['db_config']['user'] ?? 'root';
             <p style="color: #666; margin-bottom: 20px; font-size: 14px;">Creating configuration file...</p>
 
             <form method="POST">
+                <input type="hidden" name="step" value="3">
                 <div class="alert alert-info">The config.php file is being created with your database settings.</div>
                 <div class="button-group">
                     <button type="submit" class="btn-primary">Complete Installation →</button>
