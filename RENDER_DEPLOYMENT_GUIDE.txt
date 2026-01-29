@@ -1,0 +1,440 @@
+================================================================================
+                    WAARIS - RENDER DEPLOYMENT GUIDE
+                    Deploy Your Website Using GitHub
+================================================================================
+
+OVERVIEW:
+This guide will walk you through deploying your website to Render.com using 
+GitHub. This allows you to test the website on a live environment for bugs 
+and performance.
+
+================================================================================
+STEP 1: CREATE A GITHUB REPOSITORY
+================================================================================
+
+1. Go to GitHub.com and sign in
+2. Click "+" (top right) → "New repository"
+3. Fill in details:
+   - Repository name: waaris
+   - Description: Waaris - E-commerce Platform
+   - Select "Public" (Render needs access)
+4. Click "Create repository"
+5. Copy the repository URL (you'll need it next)
+
+================================================================================
+STEP 2: INITIALIZE GIT LOCALLY & PUSH CODE
+================================================================================
+
+Run these commands in PowerShell (in your waaris folder):
+
+    cd "c:\xampp\htdocs\waaris"
+    git init
+    git add .
+    git commit -m "Initial commit - production ready"
+    git branch -M main
+    git remote add origin https://github.com/YOUR_USERNAME/waaris.git
+    git push -u origin main
+
+IMPORTANT: Replace YOUR_USERNAME with your actual GitHub username!
+
+After running these commands, all your files will be on GitHub.
+
+================================================================================
+STEP 3: DEPLOYMENT CONFIGURATION FILES CREATED
+================================================================================
+
+The following files have been created in your waaris folder:
+
+✓ Dockerfile
+  - Docker container configuration for PHP with Apache
+  - Automatically handles PHP extensions and Apache setup
+  - Render uses this to build and deploy your app
+
+✓ render.yaml
+  - Configuration file that tells Render how to deploy
+  - References the Dockerfile for Docker-based deployment
+  - Defines environment variables needed
+
+✓ start.sh
+  - Bash script to install PHP dependencies on Render
+  - Starts the PHP built-in server
+
+✓ .gitignore
+  - Excludes sensitive files from GitHub
+  - Prevents uploading of "do not upload" folder, logs, etc.
+
+These files are already pushed to GitHub from Step 2.
+
+================================================================================
+STEP 4: SET UP DATABASE ON RENDER
+================================================================================
+
+IMPORTANT: MySQL is not available on Render free tier. Use PostgreSQL instead.
+
+1. Go to Render.com and sign up (free account)
+2. Log in to your Render dashboard
+3. Click "New" → "PostgreSQL" database
+4. Fill in details:
+   - Name: waaris-db
+   - Region: Select closest to your location
+   - PostgreSQL Version: 15 (or latest)
+   - Database: waaris
+5. Click "Create Database"
+6. SAVE these credentials:
+   - Host: (dpg-d5pip4f5c7fs73bnu9l0-a)
+   - Database name: waaris
+   - Username: (waaris)
+   - Password: (Xotq8Gsy87Olw1LPSzMjtDBbpUdB8k0X)
+   - Port: 5432
+   - Full connection string provided by Render
+
+You'll need these values in Step 6!
+
+NOTE: Your PHP code uses MySQL functions. After deploying to Render,
+you may need to use a MySQL adapter or update database queries to work
+with PostgreSQL. For quick testing, consider using a managed MySQL
+service like AWS RDS free tier or Database.com instead.
+
+================================================================================
+STEP 5: DEPLOY WEB SERVICE ON RENDER
+================================================================================
+
+1. In Render dashboard, click "New" → "Web Service"
+2. Connect GitHub:
+   - Click "Connect your GitHub account"
+   - Authorize Render to access your GitHub
+   - Search for and select "waaris" repository
+3. Configure the Web Service:
+   - Name: waaris
+   - Environment: Docker (recommended) or Manual
+   - Build Command: true (or leave blank)
+   - Start Command: php -S 0.0.0.0:$PORT
+   - Plan: Free tier (or Starter for better performance)
+4. Click "Create Web Service"
+
+Render will start building and deploying your app. This takes 2-5 minutes.
+
+================================================================================
+STEP 6: CONFIGURE ENVIRONMENT VARIABLES
+================================================================================
+
+After web service is created:
+
+1. Go to your web service dashboard
+2. Scroll to "Environment" section
+3. Add these variables (use values from Step 4):
+
+   Variable Name: DB_HOST
+   Value: your-mysql-host.mysql.rendervault.io
+
+   Variable Name: DB_NAME
+   Value: your_database_name
+
+   Variable Name: DB_USER
+   Value: your_username
+
+   Variable Name: DB_PASS
+   Value: your_password
+
+   Variable Name: SITE_URL
+   Value: https://waaris.onrender.com
+
+   Variable Name: ENVIRONMENT
+   Value: 
+   
+
+4. Click "Save" after adding all variables
+
+================================================================================
+STEP 7: IMPORT DATABASE SCHEMA
+================================================================================
+
+Your website needs the database tables. You have two options:
+
+OPTION A - Export from Local phpMyAdmin:
+1. Open phpMyAdmin (http://localhost/phpmyadmin)
+2. Select "ahanger_db" database
+3. Click "Export"
+4. Save as SQL file
+5. Keep this file to import to Render
+
+OPTION B - Use Render's Database Management:
+1. In Render MySQL dashboard, click "Connect"
+2. Choose "MySQL Client" or download "TablePlus"
+3. Use your database credentials to connect
+4. Import your SQL file via the client
+
+CONTACT YOUR DATABASE ADMIN if you're unsure how to export.
+
+================================================================================
+STEP 8: UPDATE CONFIG.PHP FOR RENDER
+================================================================================
+
+Your config.php has already been updated to support environment variables!
+
+The file now reads from Render environment variables:
+- DB_HOST, DB_NAME, DB_USER, DB_PASS
+- SITE_URL, ENVIRONMENT
+
+When you push config.php changes:
+1. Go to terminal
+2. Run:
+       git add config.php
+       git commit -m "Update config for Render environment variables"
+       git push
+
+Render will automatically redeploy with new changes!
+
+================================================================================
+STEP 9: MONITOR YOUR DEPLOYMENT
+================================================================================
+
+In Render Dashboard:
+
+1. Go to your "waaris" web service
+2. Click "Logs" tab to watch deployment progress
+3. Look for these messages:
+   ✓ "Build started"
+   ✓ "Build completed"
+   ✓ "Your service is live"
+
+If you see errors:
+- Read the error message carefully
+- Most common: Database connection error (check env variables)
+- Missing PHP extension: Render has common extensions pre-installed
+- Check Step 6 - Environment Variables again
+
+WAIT: Full deployment takes 2-5 minutes. Don't panic if it's still building!
+
+================================================================================
+STEP 10: VERIFY YOUR LIVE WEBSITE
+================================================================================
+
+Once deployment completes:
+
+1. Get your Live URL:
+   - Render dashboard shows: https://waaris.onrender.com
+   - (Your actual URL will have a unique subdomain)
+
+2. Open URL in browser:
+   - Should see your website homepage
+   - Check if page loads without errors
+
+3. Test Key Features:
+   ✓ Homepage loads
+   ✓ Products display correctly
+   ✓ Click on a product (should work)
+   ✓ Add product to cart
+   ✓ Login page works
+   ✓ Try registering a new account
+   ✓ Customer dashboard loads
+   ✓ Admin login works
+
+4. Check Browser Console for Errors:
+   - Right-click → Inspect → Console tab
+   - Should have minimal warnings/errors
+   - JavaScript should execute without errors
+
+5. Test Database Connection:
+   - If you see database errors, check environment variables in Step 6
+   - Verify database schema was imported in Step 7
+
+================================================================================
+STEP 11: HTTPS/SSL (AUTOMATIC)
+================================================================================
+
+Render provides FREE HTTPS automatically!
+
+✓ Your site will have green lock icon 🔒
+✓ URL will be https:// (not http://)
+✓ No additional setup needed
+✓ All cookies secure by default
+✓ Perfect for production!
+
+================================================================================
+REDEPLOYING AFTER CHANGES
+================================================================================
+
+After you make changes locally and want to push to Render:
+
+1. In PowerShell (in waaris folder):
+       git add .
+       git commit -m "Description of changes"
+       git push
+
+2. Render AUTOMATICALLY detects GitHub push
+
+3. Render will redeploy your app in 2-5 minutes
+
+4. Check Logs tab to monitor deployment
+
+NO MANUAL REDEPLOYMENT NEEDED! This is automated!
+
+================================================================================
+TROUBLESHOOTING COMMON ISSUES
+================================================================================
+
+ISSUE: Website shows "502 Bad Gateway"
+FIX: Wait 2-3 minutes for deployment to complete. Check Logs for errors.
+
+ISSUE: "Database connection failed"
+FIX: 
+- Verify DB credentials in Render Environment Variables (Step 6)
+- Confirm database schema was imported (Step 7)
+- Check database is running in Render dashboard
+- If using PostgreSQL (Render free tier), verify PHP has pdo_pgsql extension
+- Your current code uses MySQL - you may need to adapt for PostgreSQL
+
+ISSUE: "File not found" or "404 error"
+FIX: 
+- Verify all files pushed to GitHub: run "git status" locally
+- Check if file is in "do not upload" folder (don't push that)
+- Redeploy: git push again
+
+ISSUE: Images not loading
+FIX:
+- Update SITE_URL in Render environment to correct domain
+- Images should be in /assets/images/ folder
+
+ISSUE: Admin login not working
+FIX:
+- Database must be imported with admin users
+- Check if admin_users table exists in database
+- Verify DB_PASS in environment variables is correct
+
+ISSUE: Session errors or login keeps failing
+FIX:
+- Check config/security.php is using session.cookie_secure = 1 for HTTPS
+- Clear browser cookies and try again
+- Check SITE_URL matches domain exactly
+
+================================================================================
+YOUR LIVE URL & CREDENTIALS
+================================================================================
+
+Once deployed, you'll have:
+
+Live Website: https://waaris.onrender.com (unique to your app)
+Admin Login: Use credentials from your local database
+Customer Login: Can create new accounts via registration page
+
+Test accounts to create:
+1. Test customer account (register via website)
+2. Add some products
+3. Try checkout
+4. Login as admin to verify data
+
+================================================================================
+MONITORING YOUR LIVE WEBSITE
+================================================================================
+
+After going live, monitor these:
+
+1. Error Logs:
+   - Render dashboard → Logs tab
+   - Check for PHP errors or warnings
+   - Database connection issues
+
+2. Performance:
+   - Render free tier: ~5 second cold starts
+   - Upgrade to "Starter" if you need faster response times
+   - ~$7/month for Starter plan
+
+3. Database:
+   - Render PostgreSQL: Automatic backups daily
+   - Monitor storage usage
+   - Free tier: 1GB storage limit
+
+4. Security:
+   - HTTPS: ✓ Active
+   - Secure cookies: ✓ Active
+   - CSRF protection: ✓ Active (in code)
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+After verifying everything works on Render:
+
+1. Bug Testing:
+   - Test all features thoroughly
+   - Check mobile responsiveness
+   - Test on different browsers
+   - Submit forms and verify data saves
+
+2. Performance Optimization (if needed):
+   - Upgrade to Render Starter plan
+   - Optimize images
+   - Enable caching
+
+3. Custom Domain (Optional):
+   - Go to Render dashboard → Custom Domains
+   - Add your domain (e.g., waaris.com)
+   - Update DNS records
+   - $10/month
+
+4. Continuous Deployment:
+   - Every git push automatically redeploys
+   - Keep testing locally first
+   - Push only when ready to go live
+
+================================================================================
+SUPPORT & HELP
+================================================================================
+
+If you get stuck:
+
+1. Check this guide again - most issues are covered in Troubleshooting
+2. Render Docs: https://render.com/docs
+3. GitHub Docs: https://docs.github.com
+4. PHP Docs: https://www.php.net/docs.php
+
+Questions about your specific setup? Check the files in "do not upload" folder:
+- DEPLOYMENT_GUIDE.md - Detailed technical guide
+- PRODUCTION_CHECKLIST.md - Complete checklist
+- QUICK_DEPLOYMENT_GUIDE.txt - Quick reference
+
+================================================================================
+DEPLOYMENT CHECKLIST
+================================================================================
+
+Before going live, complete this checklist:
+
+SETUP:
+  ☐ GitHub account created
+  ☐ Repository created and code pushed
+  ☐ Render account created
+  ☐ PostgreSQL database created on Render (MySQL not available on free tier)
+  ☐ Web service created on Render
+
+CONFIGURATION:
+  ☐ Environment variables set (DB_HOST, DB_NAME, DB_USER, DB_PASS, SITE_URL)
+  ☐ Database schema imported
+  ☐ config.php uses environment variables
+  ☐ render.yaml in repository
+  ☐ start.sh in repository
+  ☐ .gitignore in repository
+
+TESTING:
+  ☐ Website loads without errors
+  ☐ Products display correctly
+  ☐ Can add items to cart
+  ☐ Can login (if credentials imported)
+  ☐ Can register new account
+  ☐ Admin panel loads
+  ☐ Browser console shows no critical errors
+  ☐ Database queries work correctly
+  ☐ HTTPS shows green lock 🔒
+
+GOING LIVE:
+  ☐ All tests pass
+  ☐ No 404 errors
+  ☐ No database errors
+  ☐ No authentication errors
+  ☐ Performance acceptable
+  ☐ Ready to share with users!
+
+================================================================================
+                             END OF GUIDE
+            Your website is now ready to deploy to the world! 🚀
+================================================================================

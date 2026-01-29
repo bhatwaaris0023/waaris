@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: waaris
+    runtime: docker
+    plan: free
+    
+    # Environment variables (configure in Render dashboard)
+    envVars:
+      - key: DB_HOST
+        scope: RUN
+      - key: DB_NAME
+        scope: RUN
+      - key: DB_USER
+        scope: RUN
+      - key: DB_PASS
+        scope: RUN
+      - key: SITE_URL
+        scope: RUN
+    
+    # Health check endpoint
+    healthCheckPath: /
+    
+    # Port configuration
+    ports:
+      - port: 80
+        protocol: HTTP
