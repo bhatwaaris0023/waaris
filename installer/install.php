@@ -28,13 +28,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db_name = isset($_POST['db_name']) ? trim($_POST['db_name']) : '';
             $db_user = isset($_POST['db_user']) ? trim($_POST['db_user']) : '';
             $db_pass = isset($_POST['db_pass']) ? $_POST['db_pass'] : '';
+            $db_driver = isset($_POST['db_driver']) ? trim($_POST['db_driver']) : 'mysql';
+            $db_port = isset($_POST['db_port']) ? trim($_POST['db_port']) : '';
 
             if (empty($db_host) || empty($db_name) || empty($db_user)) {
                 $error = 'Please fill in all database fields.';
             } else {
                 try {
-                    // Test connection
-                    $test_dsn = 'mysql:host=' . $db_host . ';charset=utf8mb4';
+                    // Test connection with driver-specific DSN
+                    if ($db_driver === 'pgsql') {
+                        $port = !empty($db_port) ? $db_port : 5432;
+                        $test_dsn = 'pgsql:host=' . $db_host . ';port=' . $port . ';dbname=postgres';
+                    } else {
+                        $port = !empty($db_port) ? $db_port : 3306;
+                        $test_dsn = 'mysql:host=' . $db_host . ';port=' . $port . ';charset=utf8mb4';
+                    }
                     $test_pdo = new PDO($test_dsn, $db_user, $db_pass, [
                         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     ]);
@@ -60,6 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'name' => $db_name,
                         'user' => $db_user,
                         'pass' => $db_pass,
+                        'driver' => $db_driver,
+                        'port' => $db_port,
                     ];
 
                     $success = 'Database created and schema installed successfully!';
@@ -90,8 +100,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     try {
                         $db = $_SESSION['db_config'];
+                        $driver = isset($db['driver']) ? $db['driver'] : 'mysql';
+                        $port = isset($db['port']) && !empty($db['port']) ? $db['port'] : ($driver === 'pgsql' ? 5432 : 3306);
+                        
+                        if ($driver === 'pgsql') {
+                            $dsn = 'pgsql:host=' . $db['host'] . ';port=' . $port . ';dbname=' . $db['name'];
+                        } else {
+                            $dsn = 'mysql:host=' . $db['host'] . ';port=' . $port . ';dbname=' . $db['name'];
+                        }
+                        
                         $pdo = new PDO(
-                            'mysql:host=' . $db['host'] . ';dbname=' . $db['name'],
+                            $dsn,
                             $db['user'],
                             $db['pass'],
                             [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
@@ -422,6 +441,21 @@ $db_user = $_SESSION['db_config']['user'] ?? 'root';
                     <label>Database Username</label>
                     <input type="text" name="db_user" value="<?php echo htmlspecialchars($db_user); ?>" required>
                     <div class="form-hint">Usually: root for local development</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Database Driver</label>
+                    <select name="db_driver" required>
+                        <option value="mysql" selected>MySQL / MariaDB</option>
+                        <option value="pgsql">PostgreSQL (Render)</option>
+                    </select>
+                    <div class="form-hint">MySQL for local, PostgreSQL for Render</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Database Port (Optional)</label>
+                    <input type="text" name="db_port" placeholder="3306 for MySQL, 5432 for PostgreSQL">
+                    <div class="form-hint">Leave empty for default port</div>
                 </div>
 
                 <div class="form-group">
