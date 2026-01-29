@@ -1,9 +1,19 @@
 <?php
 /**
  * Database Schema & Installation Script
+ * Supports both MySQL and PostgreSQL
  */
 
-$database_sql = <<<'SQL'
+function get_database_schema($driver = 'mysql') {
+    if ($driver === 'pgsql') {
+        return get_postgresql_schema();
+    } else {
+        return get_mysql_schema();
+    }
+}
+
+function get_mysql_schema() {
+    return <<<'SQL'
 -- Create Users Table
 CREATE TABLE IF NOT EXISTS users (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -239,8 +249,234 @@ CREATE TABLE IF NOT EXISTS testimonials (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SQL;
+}
+
+function get_postgresql_schema() {
+    return <<<'SQL'
+-- Create Users Table (PostgreSQL)
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    phone VARCHAR(20),
+    vehicle_number VARCHAR(50),
+    address TEXT,
+    city VARCHAR(50),
+    state VARCHAR(50),
+    country VARCHAR(50),
+    postal_code VARCHAR(20),
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
+
+-- Create Categories Table (PostgreSQL)
+CREATE TABLE IF NOT EXISTS categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    image_url VARCHAR(255),
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_categories_status ON categories(status);
+
+-- Create Products Table (PostgreSQL)
+CREATE TABLE IF NOT EXISTS products (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    price DECIMAL(10, 2) NOT NULL,
+    category_id INT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+    image_url VARCHAR(255),
+    stock_quantity INT DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
+CREATE INDEX IF NOT EXISTS idx_products_status ON products(status);
+
+-- Create Orders Table (PostgreSQL)
+CREATE TABLE IF NOT EXISTS orders (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    total_amount DECIMAL(10, 2) NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending',
+    shipping_address TEXT,
+    payment_method VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at);
+
+-- Create Order Items Table (PostgreSQL)
+CREATE TABLE IF NOT EXISTS order_items (
+    id SERIAL PRIMARY KEY,
+    order_id INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    product_id INT NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
+    quantity INT NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
+
+-- Create Admin Users Table (PostgreSQL)
+CREATE TABLE IF NOT EXISTS admin_users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(20) DEFAULT 'admin',
+    status VARCHAR(20) DEFAULT 'active',
+    last_login TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_admin_users_username ON admin_users(username);
+
+-- Create Settings Table (PostgreSQL)
+CREATE TABLE IF NOT EXISTS settings (
+    id SERIAL PRIMARY KEY,
+    setting_key VARCHAR(100) UNIQUE NOT NULL,
+    setting_value TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Customer Alerts Table (PostgreSQL)
+CREATE TABLE IF NOT EXISTS customer_alerts (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    alert_type VARCHAR(50) DEFAULT 'update',
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_customer_alerts_user ON customer_alerts(user_id);
+CREATE INDEX IF NOT EXISTS idx_customer_alerts_type ON customer_alerts(alert_type);
+CREATE INDEX IF NOT EXISTS idx_customer_alerts_created ON customer_alerts(created_at);
+
+-- Create Service Job Cards Table (PostgreSQL)
+CREATE TABLE IF NOT EXISTS service_job_cards (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    job_description TEXT NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending',
+    total_cost DECIMAL(10, 2) DEFAULT 0,
+    notes TEXT,
+    created_by INT NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_service_job_cards_user ON service_job_cards(user_id);
+CREATE INDEX IF NOT EXISTS idx_service_job_cards_status ON service_job_cards(status);
+CREATE INDEX IF NOT EXISTS idx_service_job_cards_created ON service_job_cards(created_at);
+
+-- Create Job Card Items Table (PostgreSQL)
+CREATE TABLE IF NOT EXISTS job_card_items (
+    id SERIAL PRIMARY KEY,
+    job_card_id INT NOT NULL REFERENCES service_job_cards(id) ON DELETE CASCADE,
+    product_id INT NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
+    quantity INT NOT NULL DEFAULT 1,
+    unit_price DECIMAL(10, 2) NOT NULL,
+    subtotal DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_job_card_items_job_card ON job_card_items(job_card_id);
+
+-- Create Product Tags Table (PostgreSQL)
+CREATE TABLE IF NOT EXISTS product_tags (
+    id SERIAL PRIMARY KEY,
+    product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    tag_name VARCHAR(100) NOT NULL,
+    tag_color VARCHAR(20) DEFAULT '#FF5733',
+    position VARCHAR(20) DEFAULT 'top-right',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_product_tags_product ON product_tags(product_id);
+
+-- Create Product Images Table (PostgreSQL)
+CREATE TABLE IF NOT EXISTS product_images (
+    id SERIAL PRIMARY KEY,
+    product_id INT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    image_url VARCHAR(255) NOT NULL,
+    alt_text VARCHAR(255),
+    is_primary BOOLEAN DEFAULT FALSE,
+    display_order INT DEFAULT 0,
+    uploaded_by INT NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_product_images_product ON product_images(product_id);
+CREATE INDEX IF NOT EXISTS idx_product_images_is_primary ON product_images(is_primary);
+
+-- Create Featured Products Table (PostgreSQL)
+CREATE TABLE IF NOT EXISTS featured_products (
+    id SERIAL PRIMARY KEY,
+    product_id INT NOT NULL UNIQUE REFERENCES products(id) ON DELETE CASCADE,
+    display_order INT DEFAULT 0,
+    is_featured BOOLEAN DEFAULT TRUE,
+    set_by INT NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_featured_products_is_featured ON featured_products(is_featured);
+CREATE INDEX IF NOT EXISTS idx_featured_products_display_order ON featured_products(display_order);
+
+-- Create Testimonials Table (PostgreSQL)
+CREATE TABLE IF NOT EXISTS testimonials (
+    id SERIAL PRIMARY KEY,
+    customer_name VARCHAR(100) NOT NULL,
+    customer_image VARCHAR(255),
+    customer_title VARCHAR(100),
+    rating INT DEFAULT 5 CHECK (rating >= 1 AND rating <= 5),
+    testimonial_text TEXT NOT NULL,
+    display_order INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_by INT REFERENCES admin_users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_testimonials_is_active ON testimonials(is_active);
+CREATE INDEX IF NOT EXISTS idx_testimonials_display_order ON testimonials(display_order);
+CREATE INDEX IF NOT EXISTS idx_testimonials_created_at ON testimonials(created_at);
+
+-- Insert Sample Categories
+INSERT INTO categories (name, description, status) VALUES
+('Motorcycles', 'High-performance motorcycles', 'active'),
+('Accessories', 'Motorcycle accessories and parts', 'active'),
+('Safety Gear', 'Helmets, jackets, and protective equipment', 'active')
+ON CONFLICT (name) DO NOTHING;
+
+-- Insert Sample Products
+INSERT INTO products (name, description, price, category_id, stock_quantity, status) VALUES
+('Ahanger Speed 1000', 'High-performance motorcycle with advanced features', 15999.99, 1, 5, 'active'),
+('Ahanger Cruiser 750', 'Comfortable cruising motorcycle', 12999.99, 1, 8, 'active'),
+('Racing Helmet Pro', 'Professional racing helmet with full protection', 4999.99, 3, 15, 'active'),
+('Premium Motorcycle Jacket', 'Leather jacket with protective padding', 6999.99, 3, 10, 'active'),
+('Custom Chrome Handlebars', 'Premium chrome handlebars for custom look', 1999.99, 2, 20, 'active'),
+('LED Headlight Kit', 'Modern LED headlight upgrade', 3499.99, 2, 12, 'active')
+ON CONFLICT DO NOTHING;
+
+-- Insert Default Settings
+INSERT INTO settings (setting_key, setting_value) VALUES
+('site_name', 'Ahanger MotoCorp'),
+('site_email', 'info@ahangermotocorp.com'),
+('maintenance_mode', '0'),
+('session_timeout', '3600')
+ON CONFLICT (setting_key) DO NOTHING;
+SQL;
+}
 
 // Export for installation script
-define('DATABASE_SCHEMA', $database_sql);
+define('DATABASE_SCHEMA', ''); // Dummy, will be replaced dynamically
 
 ?>

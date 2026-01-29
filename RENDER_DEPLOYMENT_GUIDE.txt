@@ -81,10 +81,10 @@ IMPORTANT: MySQL is not available on Render free tier. Use PostgreSQL instead.
    - Database: waaris
 5. Click "Create Database"
 6. SAVE these credentials:
-   - Host: (dpg-d5pip4f5c7fs73bnu9l0-a)
-   - Database name: waaris
-   - Username: (waaris)
-   - Password: (Xotq8Gsy87Olw1LPSzMjtDBbpUdB8k0X)
+   - Host: (dpg-d5tl89kr85hc73fag17g-a)
+   - Database name: waaris_cret
+   - Username: (waaris_cret_user)
+   - Password: (zntjeuFA4Cg7va5UfwcmuTY2zsqS8rYy)
    - Port: 5432
    - Full connection string provided by Render
 

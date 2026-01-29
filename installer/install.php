@@ -68,12 +68,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $test_pdo->exec('USE `' . $db_name . '`');
                     }
 
-                    // Execute schema
-                    $statements = explode(';', DATABASE_SCHEMA);
+                    // Execute schema (driver-specific)
+                    $schema = get_database_schema($db_driver);
+                    $statements = explode(';', $schema);
                     foreach ($statements as $statement) {
                         $statement = trim($statement);
                         if (!empty($statement)) {
-                            $test_pdo->exec($statement);
+                            try {
+                                $test_pdo->exec($statement);
+                            } catch (PDOException $e) {
+                                // Ignore duplicate table or constraint errors
+                                if (strpos($e->getMessage(), 'already exists') === false) {
+                                    // Log non-duplicate errors but continue
+                                    error_log('Schema execution warning: ' . $e->getMessage());
+                                }
+                            }
                         }
                     }
 
