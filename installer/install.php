@@ -15,7 +15,8 @@ require_once __DIR__ . '/database.sql.php';
 $config_file = __DIR__ . '/../config.php';
 $is_installed = file_exists($config_file);
 
-$current_step = isset($_GET['step']) ? (int)$_GET['step'] : 1;
+// Get step from GET or POST
+$current_step = isset($_GET['step']) ? (int)$_GET['step'] : (isset($_POST['step']) ? (int)$_POST['step'] : 1);
 $error = '';
 $success = '';
 
