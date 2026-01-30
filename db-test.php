@@ -5,14 +5,14 @@
  */
 
 // Load config (defines DB_* constants via getenv)
-require_once __DIR__ . '/config.php';
+// require_once __DIR__ . '/config.php'; // Removed - using env vars directly
 
-$driver = defined('DB_DRIVER') ? strtolower(DB_DRIVER) : 'mysql';
-$host = defined('DB_HOST') ? DB_HOST : getenv('DB_HOST');
-$port = defined('DB_PORT') && DB_PORT !== '' ? DB_PORT : ($driver === 'pgsql' ? 5432 : 3306);
-$dbname = defined('DB_NAME') ? DB_NAME : getenv('DB_NAME');
-$user = defined('DB_USER') ? DB_USER : getenv('DB_USER');
-$pass = defined('DB_PASS') ? DB_PASS : getenv('DB_PASS');
+$driver = getenv('DB_DRIVER') ?: 'mysql';
+$host = getenv('DB_HOST');
+$port = getenv('DB_PORT') ?: ($driver === 'pgsql' ? 5432 : 3306);
+$dbname = getenv('DB_NAME');
+$user = getenv('DB_USER');
+$pass = getenv('DB_PASS');
 
 if (!$host || !$dbname || !$user) {
     echo json_encode(['ok' => false, 'error' => 'Missing DB environment variables.']);
