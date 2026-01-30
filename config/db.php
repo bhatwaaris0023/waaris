@@ -10,11 +10,15 @@ if (!defined('CONFIG_LOADED')) {
     if (file_exists(__DIR__ . '/../config.php')) {
         require_once __DIR__ . '/../config.php';
     } else {
-        // Default development configuration
-        define('DB_HOST', 'dpg-d5rn7effte5s73cdunb0-a');
-        define('DB_NAME', 'waaris_db');
-        define('DB_USER', 'waaris_db_user');
-        define('DB_PASS', '592y7fahxY2iAHDiKbeTHL27n8qxHmER');
+        // Production configuration - read from environment variables
+        define('DB_DRIVER', getenv('DB_DRIVER') ?: 'mysql');
+        define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+        define('DB_PORT', getenv('DB_PORT') ?: (getenv('DB_DRIVER') === 'pgsql' ? '5432' : '3306'));
+        define('DB_NAME', getenv('DB_NAME') ?: 'waaris');
+        define('DB_USER', getenv('DB_USER') ?: 'root');
+        define('DB_PASS', getenv('DB_PASS') ?: '');
+        define('SITE_URL', getenv('SITE_URL') ?: 'http://localhost');
+        define('ENVIRONMENT', getenv('ENVIRONMENT') ?: 'development');
         define('CONFIG_LOADED', true);
     }
 }
